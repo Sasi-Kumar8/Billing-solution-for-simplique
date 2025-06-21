@@ -1,0 +1,28 @@
+import os
+import json
+import azure.functions as func
+from azure.cosmos import CosmosClient
+from azure.storage.blob import BlobServiceClient
+from datetime import datetime, timedelta
+
+def main(mytimer: func.TimerRequest) -> None:
+    # Initialize Cosmos DB client
+    cosmos_client = CosmosClient.from_connection_string(os.environ['CosmosDBConnection'])
+    database = cosmos_client.get_database_client(os.environ['CosmosDBDatabase'])
+    container = database.get_container_client(os.environ['CosmosDBContainer'])
+
+    # Initialize Blob Storage client
+    blob_service_client = BlobServiceClient.from_connection_string(os.environ['BlobStorageConnection'])
+    blob_container = blob_service_client.get_container_client(os.environ['BlobContainer'])
+
+    # Get records older than 3 months
+    query = "SELECT * FROM c WHERE c.timestamp < DATEADD('month', -3, GetCurrentDateTime())"
+    records = list(container.query_items(query, enable_cross_partition_query=True))
+
+    # Move records to Blob Storage
+    for record in records:
+        blob_name = record['id']
+        blob_client = blob_container.get_blob_client(blob_name)
+        blob_client.upload_blob(json.dumps(record))
+        # Delete record from Cosmos DB
+        container.delete_item(record['id'], partition_key=record['id'])

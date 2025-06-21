@@ -1,0 +1,115 @@
+Create an ADF pipeline with the following activities:
+
+1. *Lookup*: Get the list of records older than 3 months from Cosmos DB.
+2. *ForEach*: Iterate over the list of records and perform the following activities:
+    - *Copy data*: Copy the record from Cosmos DB to Blob Storage.
+    - *Delete*: Delete the record from Cosmos DB.
+
+ADF Dataset
+Create the following datasets:
+
+1. *CosmosDBDataset*: Cosmos DB dataset for reading and writing data.
+2. *BlobStorageDataset*: Blob Storage dataset for storing archived records.
+
+ADF Linked Service
+Create the following linked services:
+
+1. *CosmosDBLinkedService*: Cosmos DB linked service for connecting to Cosmos DB.
+2. *BlobStorageLinkedService*: Blob Storage linked service for connecting to Blob Storage.
+
+ADF Pipeline JSON
+Here's a sample JSON definition for the ADF pipeline:
+{
+    "name": "DataArchivalPipeline",
+    "properties": {
+        "activities": [
+            {
+                "name": "LookupOldRecords",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "CosmosDBSource",
+                        "sqlReaderQuery": "SELECT * FROM c WHERE c.timestamp < DATEADD('month', -3, GetCurrentDateTime())"
+                    },
+                    "dataset": {
+                        "referenceName": "CosmosDBDataset",
+                        "type": "DatasetReference"
+                    }
+                }
+            },
+            {
+                "name": "ArchiveRecords",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "LookupOldRecords",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "items": "@activity('LookupOldRecords').output.value",
+                    "activities": [
+                        {
+                            "name": "CopyRecord",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "CosmosDBSource",
+                                    "sqlReaderQuery": "SELECT * FROM c WHERE c.id = '@{item().id}'"
+                                },
+                                "sink": {
+                                    "type": "BlobSink"
+                                },
+                                "enableStaging": true,
+                                "cloudDataMovementUnits": 8
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "CosmosDBDataset",
+                                    "type": "DatasetReference"
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "BlobStorageDataset",
+                                    "type": "DatasetReference"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "DeleteRecord",
+                            "type": "Delete",
+                            "dependsOn": [
+                                {
+                                    "activity": "CopyRecord",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "typeProperties": {
+                                "dataset": {
+                                    "referenceName": "CosmosDBDataset",
+                                    "type": "DatasetReference"
+                                },
+                                "enableLogging": true
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": []
+    }
+}
+
+This implementation provides a basic framework for data archival using ADF. You can modify and extend it to fit your specific requirements.

@@ -1,0 +1,10 @@
+Implementation Details
+1. *Data Archival*:
+    - Create an Azure Function (Timer Trigger) to run periodically (e.g., daily).
+    - Use Azure Cosmos DB's Change Feed to identify records older than three months.
+    - Move these records to Azure Blob Storage.
+2. *Data Retrieval*:
+    - Create an Azure Function (HTTP Trigger) to handle requests for archived records.
+    - Fetch the requested record from Azure Blob Storage and return it to the API.
+3. *API Gateway*:
+    - Update the existing API to route requests for archived records to the Data Retrieval Azure Function.

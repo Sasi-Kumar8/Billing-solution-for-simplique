@@ -1,0 +1,21 @@
+import os
+import json
+import azure.functions as func
+from azure.storage.blob import BlobServiceClient
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    # Initialize Blob Storage client
+    blob_service_client = BlobServiceClient.from_connection_string(os.environ['BlobStorageConnection'])
+    blob_container = blob_service_client.get_container_client(os.environ['BlobContainer'])
+
+    # Get record ID from request
+    record_id = req.params.get('id')
+
+    # Fetch record from Blob Storage
+    blob_client = blob_container.get_blob_client(record_id)
+    try:
+        blob_data = blob_client.download_blob().content_as_text()
+        record = json.loads(blob_data)
+        return func.HttpResponse(json.dumps(record), mimetype="application/json")
+    except:
+        return func.HttpResponse("Record not found", status_code=404)

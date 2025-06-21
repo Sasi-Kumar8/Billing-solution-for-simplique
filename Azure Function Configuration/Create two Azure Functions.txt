@@ -1,0 +1,15 @@
+Create two Azure Functions:
+
+1. `DataArchival`: Timer trigger, runs daily
+2. `DataRetrieval`: HTTP trigger, handles GET requests
+
+Environment Variables
+Set the following environment variables:
+
+1. `CosmosDBConnection`: Cosmos DB connection string
+2. `CosmosDBDatabase`: Cosmos DB database name
+3. `CosmosDBContainer`: Cosmos DB container name
+4. `BlobStorageConnection`: Blob Storage connection string
+5. `BlobContainer`: Blob Storage container name
+
+This implementation provides a basic framework for data archival and retrieval using Azure Functions and Python. You can modify and extend it to fit your specific requirements.
